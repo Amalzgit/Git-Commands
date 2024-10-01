@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chatbot App</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 50px auto;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background: white;
+            overflow: hidden;
+        }
+
+        .chat-box {
+            height: 400px;
+            overflow-y: scroll;
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .message {
+            margin: 10px 0;
+        }
+
+        .user-message {
+            text-align: right;
+        }
+
+        .bot-message {
+            text-align: left;
+            color: blue;
+        }
+
+        .input-container {
+            display: flex;
+            padding: 10px;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin-left: 5px;
+            border: none;
+            background-color: #28a745;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div id="chat-box" class="chat-box"></div>
+        <div class="input-container">
+            <input
+                type="text"
+                id="user-input"
+                placeholder="Type a message..."
+            />
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+    <script>
+        const socket = io();
+        const chatBox = document.getElementById("chat-box");
+        const userInput = document.getElementById("user-input");
+        const sendButton = document.getElementById("send-button");
+
+        const appendMessage = (sender, message) => {
+            const messageElement = document.createElement("div");
+            messageElement.className = `message ${sender}-message`;
+            messageElement.textContent = message;
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        };
+
+        const sendMessage = () => {
+            const message = userInput.value.trim();
+            if (message) {
+                appendMessage("user", message);
+                socket.emit("sendMessage", message);
+                userInput.value = "";
+                appendMessage("bot", "Thinking..."); // Optional loading message
+            } else {
+                alert("Please enter a message.");
+            }
+        };
+
+        sendButton.addEventListener("click", sendMessage);
+
+        userInput.addEventListener("keypress", (event) => {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        });
+
+        socket.on("connect_error", (error) => {
+            console.error("Connection error:", error);
+            appendMessage("bot", "Sorry, I'm having trouble connecting right now.");
+        });
+
+        socket.on("botResponse", (response) => {
+            // Remove loading message if present
+            const lastMessage = chatBox.lastChild;
+            if (lastMessage && lastMessage.textContent === "Thinking...") {
+                chatBox.removeChild(lastMessage);
+            }
+            appendMessage("bot", response);
+        });
+
+        window.addEventListener("load", () => {
+            appendMessage("bot", "Welcome! How can I assist you today?");
+        });
+    </script>
+</body>
+</html>
